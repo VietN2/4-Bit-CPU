@@ -1,0 +1,27 @@
+# Simulation output files
+*.vcd
+*.vvp
+*.out
+
+# GTKWave files
+*.gtkw
+
+# Logs
+*.log
+
+# Temporary/editor files
+*.tmp
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.vscode/
+.idea/
+
+# Build folders
+build/
+dist/
