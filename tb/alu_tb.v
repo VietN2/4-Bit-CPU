@@ -10,7 +10,6 @@ module alu_tb;
     wire ZERO;
     wire CARRY;
 
-    // Instantiate the ALU
     alu uut (
         .A(A),
         .B(B),
@@ -21,31 +20,27 @@ module alu_tb;
     );
 
     initial begin
-        // Test ADD
+        $display("Time  A     B     OP   RESULT ZERO CARRY");
+        $monitor("%0t   %b  %b  %b   %b    %b    %b", $time, A, B, OP, RESULT, ZERO, CARRY);
+
         A = 4'd3; B = 4'd2; OP = 3'b000;
         #10;
 
-        // Test SUB
         A = 4'd5; B = 4'd3; OP = 3'b001;
         #10;
 
-        // Test AND
         A = 4'd6; B = 4'd3; OP = 3'b010;
         #10;
 
-        // Test OR
         A = 4'd6; B = 4'd3; OP = 3'b011;
         #10;
 
-        // Test XOR
         A = 4'd6; B = 4'd3; OP = 3'b100;
         #10;
 
-        // Test NOT
-        A = 4'd6; OP = 3'b101;
+        A = 4'd6; B = 4'd0; OP = 3'b101;
         #10;
 
-        // Test ZERO flag
         A = 4'd2; B = 4'd2; OP = 3'b001;
         #10;
 
