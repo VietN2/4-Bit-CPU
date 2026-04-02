@@ -101,7 +101,31 @@
                                 if (carry_flag)
                                     pc_load <= 1'b1;
                             end
-                            
+
+                            4'b0110: begin // AND
+                                acc_wr  <= 1'b1;
+                                acc_src <= 2'b10;
+                                alu_op  <= 3'b010;
+                            end
+
+                            4'b0111: begin // OR
+                                acc_wr  <= 1'b1;
+                                acc_src <= 2'b10;
+                                alu_op  <= 3'b011;
+                            end
+
+                            4'b1000: begin // XOR
+                                acc_wr  <= 1'b1;
+                                acc_src <= 2'b10;
+                                alu_op  <= 3'b100;
+                            end
+
+                            4'b1001: begin // NOT
+                                acc_wr  <= 1'b1;
+                                acc_src <= 2'b10;
+                                alu_op  <= 3'b101;
+                            end
+
                         endcase
                         state <= FETCH;
                     end
