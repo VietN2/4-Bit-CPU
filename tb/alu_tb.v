@@ -10,7 +10,7 @@ module alu_tb;
     wire ZERO;
     wire CARRY;
 
-    alu uut (
+    alu out (
         .A(A),
         .B(B),
         .OP(OP),
@@ -43,7 +43,19 @@ module alu_tb;
 
         A = 4'd2; B = 4'd2; OP = 3'b001;
         #10;
+        
+        // Carry on ADD: 15+1 = 16 → overflow
+        A = 4'd15; B = 4'd1; OP = 3'b000;
+        #10;
 
+        // Borrow on SUB: 2-5 → underflow
+        A = 4'd2; B = 4'd5; OP = 3'b001;
+        #10;
+
+        // Zero on ADD: 0+0
+        A = 4'd0; B = 4'd0; OP = 3'b000;
+        #10;
+        
         $finish;
     end
 
