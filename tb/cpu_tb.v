@@ -15,18 +15,14 @@ module cpu_tb;
     );
 
     always #5 clk = ~clk;
+
     initial begin
         clk = 0;
-        rst = 1;
+        rst = 1;        // hold reset
         #20;
-        rst = 0;
+        rst = 0;        // release reset, CPU starts
 
-        $monitor("t=%0t pc=%h ir=%h acc=%h state=%b acc_wr=%b mem_wr=%b alu_op=%b acc_src=%b halt=%b",
-                $time, uut.pc_addr, uut.ir_out, uut.acc_out,
-                uut.my_control_unit.state, uut.acc_wr, uut.mem_wr,
-                uut.alu_op, uut.acc_src, uut.halt);
-
-        wait (halt);
+        wait (halt);    // wait until CPU halts
         #10;
 
         $display("Output: %b (%0d)", out_data, out_data);
