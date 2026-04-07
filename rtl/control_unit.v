@@ -36,9 +36,12 @@
             else begin
                 case (state)
                     FETCH: begin
-                        ir_load <= 1'b1;  
-                        pc_inc <= 1'b1;  
-                        state <= DECODE;
+                        ir_load  <= 1'b1;  
+                        pc_inc   <= 1'b1;  
+                        acc_wr   <= 1'b0;
+                        mem_wr   <= 1'b0;
+                        pc_load  <= 1'b0;
+                        state    <= DECODE;
                     end
                     DECODE: begin
                         ir_load <= 1'b0;
