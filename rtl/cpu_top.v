@@ -59,6 +59,14 @@ alu my_alu(
     .CARRY(carry_flag)
 );
 
+register my_register(
+    .clk(clk),
+    .rst(rst),
+    .wr_en(acc_wr),
+    .data_in(acc_data),
+    .data_out(acc_out)
+);
+
 instr_mem my_instr_mem(
     .addr(pc_addr),
     .data(instruction)
@@ -86,14 +94,6 @@ control_unit my_control_unit(
     .alu_op(alu_op),
     .acc_src(acc_src),
     .halt(halt)
-);
-
-register_8bit my_ir(
-    .clk(clk),
-    .rst(rst),
-    .wr_en(ir_load),
-    .data_in(instruction),
-    .data_out(ir_out)
 );
 
 endmodule

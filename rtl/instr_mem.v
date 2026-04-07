@@ -4,7 +4,7 @@ module instr_mem (
 );
 
 reg [7:0] mem [0:15];
-initial $readmemb("program.mem", mem);
+initial $readmemb("programs/test1.mem", mem);
 assign data = mem[addr];
 
 endmodule
