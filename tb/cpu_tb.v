@@ -17,6 +17,8 @@ module cpu_tb;
     always #5 clk = ~clk;
 
     initial begin
+        $dumpfile("waveforms/cpu_wave.vcd");
+        $dumpvars(0, cpu_tb);
         clk = 0;
         rst = 1;        // hold reset
         #20;
