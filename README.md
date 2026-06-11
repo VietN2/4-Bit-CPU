@@ -141,8 +141,6 @@ Output: 0101 (5)
 
 CPU runs the test program and outputs the correct result. ✅
 
-<!-- TODO: Add GTKWave waveform screenshots -->
-
 ---
 
 ## Design Decisions

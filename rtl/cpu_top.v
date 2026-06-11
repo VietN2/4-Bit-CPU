@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module cpu_top(
     input clk,
     input rst,
@@ -16,8 +18,8 @@ wire [1:0] acc_src;
 wire [3:0] acc_data;
 wire [7:0] ir_out;
 
-assign opcode  = ir_out[7:4];    // change from instruction to ir_out
-assign operand = ir_out[3:0];    // change from instruction to ir_out
+assign opcode  = ir_out[7:4];
+assign operand = ir_out[3:0];
 
 reg [7:0] ir_reg;
 assign ir_out = ir_reg;

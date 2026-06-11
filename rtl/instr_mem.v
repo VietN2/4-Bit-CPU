@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module instr_mem (
     input [3:0] addr,
     output [7:0] data
