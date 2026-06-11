@@ -1,25 +1,6 @@
 # 4-Bit CPU in Verilog
 
-A 4-bit accumulator-based CPU I designed and built from scratch in Verilog. It has a 15-instruction ISA, a multi-cycle control unit, and runs verified in simulation using Icarus Verilog.
-
-**Status:** ✅ Working — CPU executes test programs and produces correct output
-
----
-
-## Table of Contents
-
-- [Architecture](#architecture)
-- [Instruction Set](#instruction-set)
-- [Modules](#modules)
-- [How to Run](#how-to-run)
-- [Test Program](#test-program)
-- [Simulation Output](#simulation-output)
-- [Design Decisions](#design-decisions)
-- [Project Structure](#project-structure)
-- [Tools](#tools)
-- [What I Learned](#what-i-learned)
-
----
+A 4-bit accumulator-based CPU I designed and built in Verilog: 15-instruction ISA, multi-cycle FSM control unit, registered flags for conditional branches. All three test programs pass in Icarus Verilog simulation with a self-checking testbench.
 
 ## Architecture
 
@@ -31,12 +12,40 @@ A 4-bit accumulator-based CPU I designed and built from scratch in Verilog. It h
 | Execution | Multi-cycle (FETCH → DECODE → EXECUTE) |
 | Instruction Memory | 16 × 8-bit ROM |
 | Data Memory | 16 × 4-bit RAM |
-| Registers | ACC, IR, PC |
-| Flags | Zero, Carry |
+| Registers | ACC, IR, PC, Flags |
+| Flags | Zero, Carry (registered, updated only by ALU instructions) |
 
-<!-- TODO: Add datapath diagram -->
+### Datapath
 
----
+```mermaid
+flowchart LR
+    PC[Program Counter] -->|addr| IMEM["Instr Memory (16x8)"]
+    IMEM -->|instruction| IR[Instruction Register]
+    IR -->|"opcode [7:4]"| CU[Control Unit FSM]
+    IR -->|"operand [3:0]"| MUX
+    IR -->|"operand = addr"| DMEM["Data Memory (16x4)"]
+    IR -->|"operand = jump target"| PC
+    DMEM -->|mem_data| MUX{ACC input mux}
+    DMEM -->|B| ALU[ALU]
+    ACC[Accumulator] -->|A| ALU
+    ALU -->|result| MUX
+    MUX -->|acc_data| ACC
+    ACC --> OUTP[/out_data/]
+    ALU -->|zero, carry| FLAGS[Flags Register]
+    FLAGS --> CU
+```
+
+The control unit drives `pc_inc`, `pc_load`, `ir_load`, `acc_wr`, `mem_wr`, `alu_op`, and `acc_src`; the datapath itself contains no decision logic.
+
+### Control Unit FSM
+
+```mermaid
+stateDiagram-v2
+    [*] --> FETCH
+    FETCH --> DECODE : latch IR, increment PC
+    DECODE --> EXECUTE : opcode/operand stable on IR
+    EXECUTE --> FETCH : drive control signals for this opcode
+```
 
 ## Instruction Set
 
@@ -60,11 +69,9 @@ Instructions are 8 bits: `[OPCODE (4 bits) | OPERAND (4 bits)]`
 | `1101` | OUT | Output ACC |
 | `1110` | HLT | Halt CPU |
 
----
+Opcode `1111` is reserved and treated as NOP. NOP and OUT have intentionally empty execute cases: NOP by definition, OUT because `out_data` is a permanent combinational tap on the accumulator (see comments in `rtl/control_unit.v`).
 
 ## Modules
-
-7 modules wired together in `cpu_top.v`:
 
 | Module | File | What it does |
 |--------|------|-------------|
@@ -74,50 +81,41 @@ Instructions are 8 bits: `[OPCODE (4 bits) | OPERAND (4 bits)]`
 | Instruction Memory | `rtl/instr_mem.v` | 16×8 ROM, loads `.mem` files |
 | Data Memory | `rtl/data_mem.v` | 16×4 RAM, combinational read, synchronous write |
 | Control Unit | `rtl/control_unit.v` | FSM that decodes opcodes and drives control signals |
-| CPU Top | `rtl/cpu_top.v` | Wires everything together + IR + ACC input mux |
-
----
+| CPU Top | `rtl/cpu_top.v` | Wires everything together + IR latch + flags register + ACC input mux |
 
 ## How to Run
 
-You need [Icarus Verilog](http://iverilog.icarus.com/) installed. Run from the project root:
+Requires [Icarus Verilog](http://iverilog.icarus.com/). From the project root:
 
-**ALU testbench:**
 ```bash
+# ALU unit tests
 iverilog -o alu_test rtl/alu.v tb/alu_tb.v
 vvp alu_test
-```
 
-**Full CPU:**
-```bash
+# Full CPU - default program (test1)
 iverilog -o cpu_test rtl/alu.v rtl/pc.v rtl/register.v rtl/instr_mem.v rtl/data_mem.v rtl/control_unit.v rtl/cpu_top.v tb/cpu_tb.v
 vvp cpu_test
+
+# Other programs via plusargs
+vvp cpu_test +prog=programs/test2.mem +expect=0000
+vvp cpu_test +prog=programs/test3.mem +expect=1111
 ```
 
----
+The CPU testbench is self-checking: it compares `out_data` against the expected value and prints PASS or FAIL, and a watchdog kills the simulation if the CPU never halts (so a broken branch can't hang the run). Waveforms dump to `waveforms/cpu_wave.vcd` for GTKWave.
 
-## Test Program
+## Test Programs
 
-`programs/test1.mem` — basic arithmetic:
+| Program | What it exercises | Expected | Result |
+|---------|-------------------|----------|--------|
+| `test1.mem` | LDI, STA, ADD, OUT, HLT — basic arithmetic (3+2) | `0101` (5) | PASS |
+| `test2.mem` | SUB, JZ, JMP — countdown loop until zero flag fires | `0000` (0) | PASS |
+| `test3.mem` | ADD overflow, JC, LDA — carry-flag branch (2+15) | `1111` (15) | PASS |
 
-```
-LDI 3       → ACC = 3
-STA 0       → store 3 at memory[0]
-LDI 2       → ACC = 2
-ADD 0       → ACC = 2 + memory[0] = 5
-OUT         → output ACC
-HLT         → stop
-```
-
-Expected output: `0101` (5)
-
----
+Each `.mem` file is hand-assembled machine code with a comment per line. Programs are padded to 16 words with HLT so a runaway PC halts instead of fetching undefined memory.
 
 ## Simulation Output
 
-### ALU Tests
-
-Tested all 6 operations plus carry/zero edge cases:
+ALU testbench — all 6 operations plus carry/zero edge cases:
 
 ```
 Time  A     B     OP   RESULT ZERO CARRY
@@ -133,15 +131,14 @@ Time  A     B     OP   RESULT ZERO CARRY
 90000 0000  0000  000  0000    1    0     ← 0+0=0 (zero)
 ```
 
-### Full CPU
+Full CPU running test1:
 
 ```
 Output: 0101 (5)
+PASS
 ```
 
-CPU runs the test program and outputs the correct result. ✅
-
----
+![CPU simulation waveform](waveforms/cpu_wave.png)
 
 ## Design Decisions
 
@@ -149,11 +146,11 @@ CPU runs the test program and outputs the correct result. ✅
 
 **Control signal bug I found:** During testing, the CPU was outputting 0 instead of 5. I used `$monitor` to trace signals cycle by cycle and found that `acc_wr` (the accumulator write enable) was staying high from the previous instruction into the next FETCH cycle. This caused the accumulator to get overwritten with the wrong value during STA. The fix was clearing all control signals at the start of FETCH so they only stay active for one cycle.
 
+**Registered flags — found by the branch tests:** The first version fed the ALU's combinational zero/carry flags straight into the control unit. test1 passed because it never branches. The moment test2 ran a JZ loop, the simulation hit the watchdog timeout: by the time JZ reaches EXECUTE, the ALU's B input has already changed to `data_mem[jump_target]` (uninitialized memory), so the zero flag no longer reflects the SUB it was supposed to test. The fix is a flags register in `cpu_top.v` that latches zero/carry only at the moment an ALU result is written to the accumulator. Loads don't touch flags, which matches how real accumulator machines behave. An untested instruction is an unimplemented instruction.
+
 **Why the IR matters:** Without an instruction register, the instruction changes the moment the PC increments during FETCH. That means DECODE and EXECUTE end up looking at the next instruction instead of the current one. Latching the instruction into an IR during FETCH keeps it stable through all three states.
 
 **ACC input mux:** The accumulator can receive data from three places — immediate values, data memory, or the ALU. A 2-bit `acc_src` signal picks which one through a mux in `cpu_top.v`. This keeps the control unit simple since it just sets signals instead of moving data around.
-
----
 
 ## Project Structure
 
@@ -170,27 +167,13 @@ CPU runs the test program and outputs the correct result. ✅
 ├── tb/                 # Testbenches
 │   ├── alu_tb.v
 │   └── cpu_tb.v
-├── programs/           # Machine code (.mem files)
-│   └── test1.mem
-├── docs/               # Documentation
-│   ├── isa.md
-│   ├── project-specs.md
-│   └── testing.md
-├── .gitignore
-└── README.md
+├── programs/           # Hand-assembled machine code (.mem files)
+│   ├── test1.mem
+│   ├── test2.mem
+│   └── test3.mem
+├── docs/               # ISA reference, specs, testing plan
+└── waveforms/          # GTKWave dumps and screenshots
 ```
-
----
-
-## Tools
-
-- Verilog
-- Icarus Verilog
-- GTKWave
-- Git / GitHub
-- VS Code
-
----
 
 ## What I Learned
 
@@ -198,8 +181,10 @@ This was my first time building a complete digital system from architecture to w
 
 - **FSM bugs are subtle.** The control signal latching issue didn't show up as a compile error or an obvious failure — the CPU just silently gave the wrong answer. Finding it required tracing signals with `$monitor` and thinking about what should happen on each clock cycle. It taught me that simulation and debugging are just as important as writing the code.
 
+- **Untested code paths hide real bugs.** The CPU passed its arithmetic test for weeks while both branch instructions were completely broken. It only took one JZ loop to expose that the flags needed to be registered. Test coverage isn't a checkbox — every instruction the README claims needs a program that proves it.
+
 - **Building one module at a time works.** I built and tested each module independently before wiring them together. When the full CPU didn't work on the first try, I already knew each piece was correct, so the problem had to be in the wiring or the control signals. That narrowed the debugging a lot.
 
-- **The top module should just be wiring.** `cpu_top.v` has no logic in it — it just connects modules with wires and a mux. Keeping it structural made it much easier to see how data flows through the CPU.
+- **The top module should mostly be wiring.** `cpu_top.v` connects modules with wires and a mux, plus the two pieces of state that belong to the datapath as a whole: the IR latch and the flags register. Keeping decision logic out of it made it much easier to see how data flows through the CPU.
 
 - **Edge cases catch real bugs.** The ALU passed basic tests right away, but it was the carry edge cases (15+1, 2-5) that proved the flags actually worked correctly.

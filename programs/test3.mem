@@ -1,0 +1,16 @@
+00011111  // 0: LDI 15  - ACC = 15
+00110000  // 1: STA 0   - mem[0] = 15
+00010010  // 2: LDI 2   - ACC = 2
+01000000  // 3: ADD 0   - 2 + 15 = 17 -> ACC = 1, carry flag set
+11000111  // 4: JC 7    - carry set -> take the branch
+00010000  // 5: LDI 0   - fail marker: only runs if JC was not taken
+10101000  // 6: JMP 8
+00100000  // 7: LDA 0   - success path: ACC = mem[0] = 15
+11010000  // 8: OUT     - 1111 = pass, 0000 = JC broken
+11100000  // 9: HLT
+11100000  // padding: HLT so a runaway PC stops instead of fetching x
+11100000
+11100000
+11100000
+11100000
+11100000

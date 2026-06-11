@@ -11,7 +11,8 @@ wire [7:0] instruction;
 wire [3:0] opcode, operand;
 wire [3:0] acc_out, alu_result, mem_data;
 wire [3:0] pc_addr;
-wire zero_flag, carry_flag;
+wire alu_zero, alu_carry;
+reg  zero_flag, carry_flag;
 wire pc_inc, pc_load, ir_load, acc_wr, mem_wr;
 wire [2:0] alu_op;
 wire [1:0] acc_src;
@@ -29,6 +30,22 @@ always @(posedge clk) begin
         ir_reg <= 8'b0;
     else if (ir_load)
         ir_reg <= instruction;
+end
+
+// Flags register: latch the ALU flags only at the moment an ALU result
+// is written to ACC (acc_wr with acc_src = ALU). Without this, JZ/JC
+// would sample the ALU's live combinational flags, which by branch time
+// are computed from the branch's own operand address - not the result
+// of the last arithmetic instruction. Loads (LDI/LDA) leave flags alone.
+always @(posedge clk) begin
+    if (rst) begin
+        zero_flag  <= 1'b0;
+        carry_flag <= 1'b0;
+    end
+    else if (acc_wr && acc_src == 2'b10) begin
+        zero_flag  <= alu_zero;
+        carry_flag <= alu_carry;
+    end
 end
 
 // Mux for ACC input
@@ -57,8 +74,8 @@ alu my_alu(
     .B(mem_data),
     .OP(alu_op),
     .RESULT(alu_result),
-    .ZERO(zero_flag),
-    .CARRY(carry_flag)
+    .ZERO(alu_zero),
+    .CARRY(alu_carry)
 );
 
 register my_register(

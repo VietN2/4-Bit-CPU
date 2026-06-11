@@ -1,0 +1,16 @@
+00010001  // 0: LDI 1   - ACC = 1
+00111111  // 1: STA 15  - mem[15] = 1 (decrement constant)
+00010011  // 2: LDI 3   - ACC = 3 (loop counter)
+01011111  // 3: SUB 15  - ACC = ACC - 1, sets zero flag on last pass
+10110110  // 4: JZ 6    - counter hit zero -> exit loop
+10100011  // 5: JMP 3   - keep counting down
+11010000  // 6: OUT     - ACC should be 0
+11100000  // 7: HLT
+11100000  // padding: HLT so a runaway PC stops instead of fetching x
+11100000
+11100000
+11100000
+11100000
+11100000
+11100000
+11100000
